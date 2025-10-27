@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "Test site generation with valid idea",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "idea": "Лендинг для кофейни"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "html": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test OPTIONS request",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

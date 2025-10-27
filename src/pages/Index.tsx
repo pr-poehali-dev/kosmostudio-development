@@ -23,6 +23,29 @@ const Index = () => {
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const generateSiteWithChatGPT = async (idea: string): Promise<string> => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/39dac2b2-b23d-4e1a-8060-e3b3d25a1f55', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idea }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate site');
+      }
+
+      const data = await response.json();
+      return data.html;
+    } catch (error) {
+      console.error('Error generating site:', error);
+      throw error;
+    }
+  };
+
   const generateSiteCode = (idea: string) => {
     const randomId = Math.floor(Math.random() * 90000) + 10000;
     const html = `<!DOCTYPE html>
@@ -164,7 +187,7 @@ const Index = () => {
     return html;
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputValue.trim() || isGenerating) return;
 
     const userMessage: Message = {
@@ -178,29 +201,36 @@ const Index = () => {
     setInputValue('');
     setIsGenerating(true);
 
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: Date.now() + 1,
-        text: 'Создаю сайт на основе твоего описания... ✨',
+    const aiMessage: Message = {
+      id: Date.now() + 1,
+      text: 'Создаю сайт с помощью ChatGPT... Это займёт 10-20 секунд ✨',
+      isUser: false,
+    };
+    setMessages(prev => [...prev, aiMessage]);
+
+    try {
+      const generatedHtml = await generateSiteWithChatGPT(userIdea);
+      
+      const resultMessage: Message = {
+        id: Date.now() + 2,
+        text: `Готово! Вот твой сайт "${userIdea}". Нажми на него чтобы открыть в полном размере! 🎉`,
+        isUser: false,
+        sitePreview: generatedHtml,
+      };
+      
+      setMessages(prev => [...prev, resultMessage]);
+      toast.success('Сайт создан ChatGPT!');
+    } catch (error) {
+      const errorMessage: Message = {
+        id: Date.now() + 2,
+        text: `Ошибка при генерации сайта. Проверь что API ключ OpenAI добавлен в настройках проекта. ❌`,
         isUser: false,
       };
-      setMessages(prev => [...prev, aiMessage]);
-
-      setTimeout(() => {
-        const generatedHtml = generateSiteCode(userIdea);
-        
-        const resultMessage: Message = {
-          id: Date.now() + 2,
-          text: `Готово! Вот твой сайт "${userIdea}". Можешь нажать на него чтобы открыть в полном размере! 🎉`,
-          isUser: false,
-          sitePreview: generatedHtml,
-        };
-        
-        setMessages(prev => [...prev, resultMessage]);
-        setIsGenerating(false);
-        toast.success('Сайт создан!');
-      }, 2000);
-    }, 1000);
+      setMessages(prev => [...prev, errorMessage]);
+      toast.error('Не удалось создать сайт');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const openSiteInNewTab = (html: string) => {
