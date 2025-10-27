@@ -2,57 +2,26 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Icon from '@/components/ui/icon';
-import { ProjectSidebar } from '@/components/ProjectSidebar';
-import { CodeEditor } from '@/components/CodeEditor';
 
 interface Message {
   id: number;
   text: string;
   isUser: boolean;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  createdAt: Date;
-  url?: string;
-  files: FileType[];
-  generatedSite: string;
-}
-
-interface FileType {
-  id: string;
-  name: string;
-  content: string;
-  language: string;
+  sitePreview?: string;
 }
 
 const Index = () => {
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: '1',
-      name: 'Мой первый проект',
-      createdAt: new Date(),
-      files: [],
-      generatedSite: '',
-    },
-  ]);
-  const [currentProject, setCurrentProject] = useState<Project>(projects[0]);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: 'Привет! Я KosmoStudio AI. Опиши мне идею сайта, и я создам его для тебя бесплатно! 🚀',
+      text: 'Привет! Я KosmoStudio AI. Опиши мне идею сайта, и я создам его для тебя прямо здесь! 🚀',
       isUser: false,
     },
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [activeTab, setActiveTab] = useState('core');
-  const [siteUrl, setSiteUrl] = useState('');
-  const [isPublished, setIsPublished] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const generateSiteCode = (idea: string) => {
     const randomId = Math.floor(Math.random() * 90000) + 10000;
@@ -61,7 +30,7 @@ const Index = () => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Сайт создан в KosmoStudio</title>
+    <title>${idea}</title>
     <style>
         * {
             margin: 0;
@@ -155,15 +124,15 @@ const Index = () => {
 <body>
     <div class="header">
         <div class="container">
-            <h2 style="color: #FFD700;">✨ Создано в KosmoStudio</h2>
+            <h2 style="color: #FFD700;">✨ ${idea}</h2>
         </div>
     </div>
     
     <div class="container">
         <div class="hero">
-            <h1>Ваша идея: ${idea}</h1>
+            <h1>Добро пожаловать!</h1>
             <p class="subtitle">Сайт создан автоматически с помощью искусственного интеллекта</p>
-            <button class="cta-button" onclick="alert('Кнопка работает!')">Начать</button>
+            <button class="cta-button" onclick="alert('Привет! Кнопка работает 🎉')">Начать</button>
         </div>
         
         <div class="features">
@@ -187,25 +156,16 @@ const Index = () => {
     
     <div class="footer">
         <p>Создано с помощью KosmoStudio AI • ${new Date().getFullYear()}</p>
-        <p style="margin-top: 10px;">Ваш уникальный ID: ${randomId}</p>
+        <p style="margin-top: 10px;">ID: ${randomId}</p>
     </div>
 </body>
 </html>`;
 
-    const files: FileType[] = [
-      {
-        id: 'html-1',
-        name: 'index.html',
-        content: html,
-        language: 'html',
-      },
-    ];
-
-    return { html, id: randomId, files };
+    return html;
   };
 
   const handleSend = () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isGenerating) return;
 
     const userMessage: Message = {
       id: Date.now(),
@@ -213,112 +173,40 @@ const Index = () => {
       isUser: true,
     };
 
-    setMessages([...messages, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     const userIdea = inputValue;
     setInputValue('');
+    setIsGenerating(true);
 
     setTimeout(() => {
       const aiMessage: Message = {
         id: Date.now() + 1,
-        text: 'Отлично! Создаю сайт на основе твоей идеи... ✨',
+        text: 'Создаю сайт на основе твоего описания... ✨',
         isUser: false,
       };
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages(prev => [...prev, aiMessage]);
 
       setTimeout(() => {
-        const { html, id, files } = generateSiteCode(userIdea);
+        const generatedHtml = generateSiteCode(userIdea);
         
-        const updatedProject = {
-          ...currentProject,
-          generatedSite: html,
-          files: files,
-        };
-        
-        setCurrentProject(updatedProject);
-        setProjects(prev => prev.map(p => p.id === currentProject.id ? updatedProject : p));
-        
-        const successMessage: Message = {
+        const resultMessage: Message = {
           id: Date.now() + 2,
-          text: `Готово! Сайт создан. Переходи во вкладку "Сайт" чтобы посмотреть результат, или в "Код" чтобы отредактировать! 🎉`,
+          text: `Готово! Вот твой сайт "${userIdea}". Можешь нажать на него чтобы открыть в полном размере! 🎉`,
           isUser: false,
+          sitePreview: generatedHtml,
         };
-        setMessages((prev) => [...prev, successMessage]);
-        setActiveTab('site');
-        toast.success('Сайт успешно создан!');
+        
+        setMessages(prev => [...prev, resultMessage]);
+        setIsGenerating(false);
+        toast.success('Сайт создан!');
       }, 2000);
     }, 1000);
   };
 
-  const handlePublish = () => {
-    const randomId = Math.floor(Math.random() * 90000) + 10000;
-    const url = `https://${randomId}.kosmostudio.net`;
-    setSiteUrl(url);
-    setIsPublished(true);
-    
-    const updatedProject = {
-      ...currentProject,
-      url: url,
-    };
-    setCurrentProject(updatedProject);
-    setProjects(prev => prev.map(p => p.id === currentProject.id ? updatedProject : p));
-    
-    toast.success('Сайт опубликован!');
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(siteUrl);
-    toast.success('Ссылка скопирована в буфер обмена!');
-  };
-
-  const handleCreateProject = (name: string) => {
-    const newProject: Project = {
-      id: Date.now().toString(),
-      name,
-      createdAt: new Date(),
-      files: [],
-      generatedSite: '',
-    };
-    setProjects([...projects, newProject]);
-    setCurrentProject(newProject);
-    setMessages([
-      {
-        id: 1,
-        text: 'Привет! Я KosmoStudio AI. Опиши мне идею сайта, и я создам его для тебя бесплатно! 🚀',
-        isUser: false,
-      },
-    ]);
-    setActiveTab('core');
-    setIsPublished(false);
-    setSiteUrl('');
-    toast.success(`Проект "${name}" создан!`);
-  };
-
-  const handleDeleteProject = (id: string) => {
-    if (projects.length === 1) {
-      toast.error('Нельзя удалить последний проект!');
-      return;
-    }
-    setProjects(prev => prev.filter(p => p.id !== id));
-    if (currentProject.id === id) {
-      setCurrentProject(projects[0].id === id ? projects[1] : projects[0]);
-    }
-    toast.success('Проект удален!');
-  };
-
-  const handleFileChange = (fileId: string, content: string) => {
-    const updatedProject = {
-      ...currentProject,
-      files: currentProject.files.map(f => 
-        f.id === fileId ? { ...f, content } : f
-      ),
-      generatedSite: content,
-    };
-    setCurrentProject(updatedProject);
-    setProjects(prev => prev.map(p => p.id === currentProject.id ? updatedProject : p));
-  };
-
-  const handleSaveFiles = () => {
-    toast.success('Файлы сохранены!');
+  const openSiteInNewTab = (html: string) => {
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
   };
 
   return (
@@ -328,259 +216,187 @@ const Index = () => {
       
       <div className="relative z-10 flex flex-col h-screen">
         <header className="px-6 py-4 border-b border-border/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowSidebar(!showSidebar)}
-                className="hover:bg-primary/20"
-              >
-                <Icon name={showSidebar ? 'PanelLeftClose' : 'PanelLeft'} size={20} />
-              </Button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                  <Icon name="Sparkles" className="text-black" size={24} />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gradient">KosmoStudio</h1>
-                  <p className="text-xs text-muted-foreground">{currentProject.name}</p>
-                </div>
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                <Icon name="Sparkles" className="text-black" size={24} />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gradient">KosmoStudio</h1>
+                <p className="text-xs text-muted-foreground">AI Website Generator</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Icon name="Zap" size={16} className="text-primary" />
-                <span>Бесплатно навсегда</span>
-              </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Icon name="Zap" size={16} className="text-primary" />
+              <span>Бесплатно навсегда</span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
-          {showSidebar && (
-            <ProjectSidebar
-              projects={projects}
-              currentProject={currentProject}
-              onSelectProject={setCurrentProject}
-              onCreateProject={handleCreateProject}
-              onDeleteProject={handleDeleteProject}
-            />
-          )}
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <div className="border-b border-border/50 backdrop-blur-sm px-6">
-              <TabsList className="bg-transparent border-0 h-12">
-                <TabsTrigger 
-                  value="core" 
-                  className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
-                >
-                  <Icon name="MessageSquare" size={18} className="mr-2" />
-                  Ядро
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="code"
-                  className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
-                  disabled={currentProject.files.length === 0}
-                >
-                  <Icon name="Code" size={18} className="mr-2" />
-                  Код
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="site"
-                  className="data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary"
-                  disabled={!currentProject.generatedSite}
-                >
-                  <Icon name="Globe" size={18} className="mr-2" />
-                  Сайт
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="core" className="flex-1 flex flex-col mt-0">
-              <div className="flex-1 overflow-y-auto px-6 py-8">
-                <div className="max-w-4xl mx-auto space-y-6">
-                  {messages.length === 1 && (
-                    <div className="text-center space-y-8 py-12 animate-fade-in">
-                      <div className="space-y-4">
-                        <h2 className="text-5xl font-bold">
-                          Создай сайт за <span className="text-gradient animate-gradient">минуты</span>
-                        </h2>
-                        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                          Просто опиши идею на русском языке — ИИ сделает всё остальное
-                        </p>
-                      </div>
-
-                      <div className="grid md:grid-cols-3 gap-4 mt-12">
-                        <Card className="p-6 bg-card/50 backdrop-blur-sm border-primary/20 hover:border-primary/50 transition-all hover:scale-105">
-                          <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                            <Icon name="Rocket" className="text-primary" size={24} />
-                          </div>
-                          <h3 className="font-semibold text-lg mb-2">Быстро</h3>
-                          <p className="text-sm text-muted-foreground">
-                            От идеи до готового сайта за минуты
-                          </p>
-                        </Card>
-
-                        <Card className="p-6 bg-card/50 backdrop-blur-sm border-secondary/20 hover:border-secondary/50 transition-all hover:scale-105">
-                          <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center mb-4">
-                            <Icon name="Heart" className="text-secondary" size={24} />
-                          </div>
-                          <h3 className="font-semibold text-lg mb-2">Бесплатно</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Навсегда бесплатный доступ ко всем функциям
-                          </p>
-                        </Card>
-
-                        <Card className="p-6 bg-card/50 backdrop-blur-sm border-primary/20 hover:border-primary/50 transition-all hover:scale-105">
-                          <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                            <Icon name="Code" className="text-primary" size={24} />
-                          </div>
-                          <h3 className="font-semibold text-lg mb-2">Просто</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Без программирования и сложных настроек
-                          </p>
-                        </Card>
-                      </div>
-                    </div>
-                  )}
-
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-4 animate-fade-in ${
-                        message.isUser ? 'flex-row-reverse' : 'flex-row'
-                      }`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          message.isUser
-                            ? 'bg-gradient-to-br from-primary to-secondary'
-                            : 'bg-gradient-to-br from-secondary to-primary'
-                        }`}
-                      >
-                        {message.isUser ? (
-                          <Icon name="User" className="text-black" size={20} />
-                        ) : (
-                          <Icon name="Sparkles" className="text-black" size={20} />
-                        )}
-                      </div>
-                      <Card
-                        className={`p-4 max-w-2xl ${
-                          message.isUser
-                            ? 'bg-gradient-to-br from-primary to-secondary text-black'
-                            : 'bg-card/80 backdrop-blur-sm border-primary/20'
-                        }`}
-                      >
-                        <p className="leading-relaxed">{message.text}</p>
-                      </Card>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-border/50 backdrop-blur-xl bg-background/80 px-6 py-6">
-                <div className="max-w-4xl mx-auto">
-                  <div className="flex gap-3 items-end">
-                    <div className="flex-1 relative">
-                      <Input
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                        placeholder="Опиши идею сайта... Например: 'Лендинг для кофейни с меню и формой заказа'"
-                        className="pr-12 h-14 bg-input/50 backdrop-blur-sm border-primary/30 focus:border-primary text-base"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                        <kbd className="px-2 py-1 rounded bg-muted/50">Enter</kbd>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={handleSend}
-                      disabled={!inputValue.trim()}
-                      className="h-14 px-8 bg-gradient-to-r from-primary via-secondary to-primary animate-gradient hover:scale-105 transition-transform font-semibold text-black"
-                    >
-                      <Icon name="Send" size={20} />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-3 text-center">
-                    KosmoStudio AI создаст сайт на основе вашего описания
+        <div className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {messages.length === 1 && (
+              <div className="text-center space-y-8 py-12 animate-fade-in">
+                <div className="space-y-4">
+                  <h2 className="text-5xl font-bold">
+                    Создай сайт за <span className="text-gradient animate-gradient">минуты</span>
+                  </h2>
+                  <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                    Просто опиши идею на русском языке — ИИ создаст сайт прямо в чате
                   </p>
                 </div>
+
+                <div className="grid md:grid-cols-3 gap-4 mt-12">
+                  <Card className="p-6 bg-card/50 backdrop-blur-sm border-primary/20 hover:border-primary/50 transition-all hover:scale-105">
+                    <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
+                      <Icon name="Rocket" className="text-primary" size={24} />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Быстро</h3>
+                    <p className="text-sm text-muted-foreground">
+                      От идеи до готового сайта за секунды
+                    </p>
+                  </Card>
+
+                  <Card className="p-6 bg-card/50 backdrop-blur-sm border-secondary/20 hover:border-secondary/50 transition-all hover:scale-105">
+                    <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center mb-4">
+                      <Icon name="Heart" className="text-secondary" size={24} />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Бесплатно</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Навсегда бесплатный доступ ко всем функциям
+                    </p>
+                  </Card>
+
+                  <Card className="p-6 bg-card/50 backdrop-blur-sm border-primary/20 hover:border-primary/50 transition-all hover:scale-105">
+                    <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
+                      <Icon name="MessageSquare" className="text-primary" size={24} />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Просто</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Без программирования, всё в одном чате
+                    </p>
+                  </Card>
+                </div>
+
+                <div className="mt-12 p-6 bg-card/30 backdrop-blur-sm rounded-lg border border-primary/20">
+                  <p className="text-sm text-muted-foreground mb-4">💡 Примеры запросов:</p>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-left">• "Лендинг для кофейни с меню и контактами"</p>
+                    <p className="text-left">• "Портфолио фотографа с галереей работ"</p>
+                    <p className="text-left">• "Сайт для студии йоги с расписанием занятий"</p>
+                  </div>
+                </div>
               </div>
-            </TabsContent>
+            )}
 
-            <TabsContent value="code" className="flex-1 mt-0 overflow-hidden">
-              {currentProject.files.length > 0 ? (
-                <CodeEditor
-                  files={currentProject.files}
-                  onFileChange={handleFileChange}
-                  onSave={handleSaveFiles}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center space-y-4">
-                    <Icon name="Code" size={64} className="text-muted-foreground mx-auto" />
-                    <p className="text-muted-foreground">Создайте сайт в чате, чтобы увидеть код</p>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="site" className="flex-1 flex flex-col mt-0 overflow-hidden">
-              <div className="flex-1 flex flex-col">
-                <div className="border-b border-border/50 backdrop-blur-sm px-6 py-4">
-                  <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {isPublished && (
-                        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card/50 backdrop-blur-sm border border-primary/30">
-                          <Icon name="Globe" size={16} className="text-primary" />
-                          <span className="text-sm font-mono">{siteUrl}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      {!isPublished ? (
-                        <Button
-                          onClick={handlePublish}
-                          className="bg-gradient-to-r from-primary to-secondary text-black font-semibold hover:scale-105 transition-transform"
-                        >
-                          <Icon name="Upload" size={18} className="mr-2" />
-                          Опубликовать
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={handleCopyLink}
-                          variant="outline"
-                          className="border-primary/30 hover:border-primary/50"
-                        >
-                          <Icon name="Copy" size={18} className="mr-2" />
-                          Скопировать ссылку
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-hidden">
-                  {currentProject.generatedSite ? (
-                    <iframe
-                      srcDoc={currentProject.generatedSite}
-                      className="w-full h-full border-0"
-                      title="Generated Site Preview"
-                      sandbox="allow-scripts"
-                    />
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex gap-4 animate-fade-in ${
+                  message.isUser ? 'flex-row-reverse' : 'flex-row'
+                }`}
+              >
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    message.isUser
+                      ? 'bg-gradient-to-br from-primary to-secondary'
+                      : 'bg-gradient-to-br from-secondary to-primary'
+                  }`}
+                >
+                  {message.isUser ? (
+                    <Icon name="User" className="text-black" size={20} />
                   ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center space-y-4">
-                        <Icon name="Globe" size={64} className="text-muted-foreground mx-auto" />
-                        <p className="text-muted-foreground">Сайт ещё не создан. Перейди во вкладку "Ядро" и опиши свою идею.</p>
+                    <Icon name="Sparkles" className="text-black" size={20} />
+                  )}
+                </div>
+                <div className="flex-1 space-y-3">
+                  <Card
+                    className={`p-4 ${
+                      message.isUser
+                        ? 'bg-gradient-to-br from-primary to-secondary text-black'
+                        : 'bg-card/80 backdrop-blur-sm border-primary/20'
+                    }`}
+                  >
+                    <p className="leading-relaxed">{message.text}</p>
+                  </Card>
+                  
+                  {message.sitePreview && (
+                    <Card 
+                      className="overflow-hidden border-primary/30 hover:border-primary/50 transition-all cursor-pointer group"
+                      onClick={() => openSiteInNewTab(message.sitePreview)}
+                    >
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-2 text-white">
+                            <Icon name="ExternalLink" size={20} />
+                            <span className="font-semibold">Открыть в полном размере</span>
+                          </div>
+                        </div>
+                        <iframe
+                          srcDoc={message.sitePreview}
+                          className="w-full h-[400px] border-0 pointer-events-none"
+                          title="Site Preview"
+                          sandbox="allow-scripts"
+                        />
                       </div>
-                    </div>
+                    </Card>
                   )}
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            ))}
+
+            {isGenerating && (
+              <div className="flex gap-4 animate-fade-in">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-secondary to-primary">
+                  <Icon name="Loader2" className="text-black animate-spin" size={20} />
+                </div>
+                <Card className="p-4 bg-card/80 backdrop-blur-sm border-primary/20">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Генерирую...</span>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-border/50 backdrop-blur-xl bg-background/80 px-6 py-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex gap-3 items-end">
+              <div className="flex-1 relative">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                  placeholder="Опиши идею сайта... Например: 'Лендинг для пиццерии с меню'"
+                  className="pr-12 h-14 bg-input/50 backdrop-blur-sm border-primary/30 focus:border-primary text-base"
+                  disabled={isGenerating}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  <kbd className="px-2 py-1 rounded bg-muted/50">Enter</kbd>
+                </div>
+              </div>
+              <Button
+                onClick={handleSend}
+                disabled={!inputValue.trim() || isGenerating}
+                className="h-14 px-8 bg-gradient-to-r from-primary via-secondary to-primary animate-gradient hover:scale-105 transition-transform font-semibold text-black disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <Icon name="Loader2" size={20} className="animate-spin" />
+                ) : (
+                  <Icon name="Send" size={20} />
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3 text-center">
+              KosmoStudio AI создаст сайт и покажет его прямо в чате
+            </p>
+          </div>
         </div>
       </div>
     </div>
