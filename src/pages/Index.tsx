@@ -12,6 +12,13 @@ interface Message {
   sitePreview?: string;
 }
 
+type UserPlan = 'free' | 'premium' | 'profi';
+
+interface UserData {
+  energy: number;
+  plan: UserPlan;
+}
+
 const Index = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -22,29 +29,12 @@ const Index = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [userData, setUserData] = useState<UserData>({
+    energy: 1000,
+    plan: 'free'
+  });
 
-  const generateSiteWithChatGPT = async (idea: string): Promise<string> => {
-    try {
-      const response = await fetch('https://functions.poehali.dev/39dac2b2-b23d-4e1a-8060-e3b3d25a1f55', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idea }),
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate site');
-      }
-
-      const data = await response.json();
-      return data.html;
-    } catch (error) {
-      console.error('Error generating site:', error);
-      throw error;
-    }
-  };
 
   const generateSiteCode = (idea: string) => {
     const randomId = Math.floor(Math.random() * 90000) + 10000;
@@ -187,8 +177,13 @@ const Index = () => {
     return html;
   };
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!inputValue.trim() || isGenerating) return;
+
+    if (userData.energy < 2) {
+      toast.error('Недостаточно энергии! Купи Premium или Профи');
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now(),
@@ -201,42 +196,72 @@ const Index = () => {
     setInputValue('');
     setIsGenerating(true);
 
-    const aiMessage: Message = {
-      id: Date.now() + 1,
-      text: 'Создаю сайт с помощью ChatGPT... Это займёт 10-20 секунд ✨',
-      isUser: false,
-    };
-    setMessages(prev => [...prev, aiMessage]);
+    setUserData(prev => ({ ...prev, energy: prev.energy - 2 }));
 
-    try {
-      const generatedHtml = await generateSiteWithChatGPT(userIdea);
-      
-      const resultMessage: Message = {
-        id: Date.now() + 2,
-        text: `Готово! Вот твой сайт "${userIdea}". Нажми на него чтобы открыть в полном размере! 🎉`,
-        isUser: false,
-        sitePreview: generatedHtml,
-      };
-      
-      setMessages(prev => [...prev, resultMessage]);
-      toast.success('Сайт создан ChatGPT!');
-    } catch (error) {
-      const errorMessage: Message = {
-        id: Date.now() + 2,
-        text: `Ошибка при генерации сайта. Проверь что API ключ OpenAI добавлен в настройках проекта. ❌`,
+    setTimeout(() => {
+      const aiMessage: Message = {
+        id: Date.now() + 1,
+        text: 'Создаю сайт на основе твоего описания... ✨',
         isUser: false,
       };
-      setMessages(prev => [...prev, errorMessage]);
-      toast.error('Не удалось создать сайт');
-    } finally {
-      setIsGenerating(false);
-    }
+      setMessages(prev => [...prev, aiMessage]);
+
+      setTimeout(() => {
+        const generatedHtml = generateSiteCode(userIdea);
+        
+        const resultMessage: Message = {
+          id: Date.now() + 2,
+          text: `Готово! Вот твой сайт "${userIdea}". Можешь нажать на него чтобы открыть в полном размере! 🎉`,
+          isUser: false,
+          sitePreview: generatedHtml,
+        };
+        
+        setMessages(prev => [...prev, resultMessage]);
+        setIsGenerating(false);
+        toast.success('Сайт создан!');
+      }, 2000);
+    }, 1000);
   };
 
   const openSiteInNewTab = (html: string) => {
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
+  };
+
+  const downloadCode = (html: string, filename: string) => {
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Код скачан!');
+  };
+
+  const getPlanBadge = (plan: UserPlan) => {
+    switch (plan) {
+      case 'premium':
+        return '👑 Premium';
+      case 'profi':
+        return '💎 Профи';
+      default:
+        return '🆓 Free';
+    }
+  };
+
+  const getPlanColor = (plan: UserPlan) => {
+    switch (plan) {
+      case 'premium':
+        return 'bg-gradient-to-r from-yellow-500 to-orange-500';
+      case 'profi':
+        return 'bg-gradient-to-r from-purple-500 to-pink-500';
+      default:
+        return 'bg-gray-500';
+    }
   };
 
   return (
@@ -256,9 +281,14 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground">AI Website Generator</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon name="Zap" size={16} className="text-primary" />
-              <span>Бесплатно навсегда</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Icon name="Zap" size={16} className="text-yellow-500" />
+                <span className="font-bold text-foreground">{userData.energy}</span>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-xs font-bold text-white ${getPlanColor(userData.plan)}`}>
+                {getPlanBadge(userData.plan)}
+              </div>
             </div>
           </div>
         </header>
@@ -289,11 +319,11 @@ const Index = () => {
 
                   <Card className="p-6 bg-card/50 backdrop-blur-sm border-secondary/20 hover:border-secondary/50 transition-all hover:scale-105">
                     <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center mb-4">
-                      <Icon name="Heart" className="text-secondary" size={24} />
+                      <Icon name="Zap" className="text-yellow-500" size={24} />
                     </div>
-                    <h3 className="font-semibold text-lg mb-2">Бесплатно</h3>
+                    <h3 className="font-semibold text-lg mb-2">Энергия</h3>
                     <p className="text-sm text-muted-foreground">
-                      Навсегда бесплатный доступ ко всем функциям
+                      1000 энергии в подарок, 2 энергии за запрос
                     </p>
                   </Card>
 
@@ -351,25 +381,34 @@ const Index = () => {
                   </Card>
                   
                   {message.sitePreview && (
-                    <Card 
-                      className="overflow-hidden border-primary/30 hover:border-primary/50 transition-all cursor-pointer group"
-                      onClick={() => openSiteInNewTab(message.sitePreview)}
-                    >
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="flex items-center gap-2 text-white">
-                            <Icon name="ExternalLink" size={20} />
-                            <span className="font-semibold">Открыть в полном размере</span>
+                    <div className="space-y-2">
+                      <Card 
+                        className="overflow-hidden border-primary/30 hover:border-primary/50 transition-all cursor-pointer group"
+                        onClick={() => openSiteInNewTab(message.sitePreview)}
+                      >
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-2 text-white">
+                              <Icon name="ExternalLink" size={20} />
+                              <span className="font-semibold">Открыть в полном размере</span>
+                            </div>
                           </div>
+                          <iframe
+                            srcDoc={message.sitePreview}
+                            className="w-full h-[400px] border-0 pointer-events-none"
+                            title="Site Preview"
+                            sandbox="allow-scripts"
+                          />
                         </div>
-                        <iframe
-                          srcDoc={message.sitePreview}
-                          className="w-full h-[400px] border-0 pointer-events-none"
-                          title="Site Preview"
-                          sandbox="allow-scripts"
-                        />
-                      </div>
-                    </Card>
+                      </Card>
+                      <Button
+                        onClick={() => downloadCode(message.sitePreview, 'website.html')}
+                        className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-black font-semibold"
+                      >
+                        <Icon name="Download" size={16} className="mr-2" />
+                        Скачать код (HTML + CSS + JS)
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -423,9 +462,23 @@ const Index = () => {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-3 text-center">
-              KosmoStudio AI создаст сайт и покажет его прямо в чате
-            </p>
+            <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+              <span>У тебя {userData.energy} энергии • 2 энергии за запрос</span>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setUserData(prev => ({ ...prev, plan: 'premium' }))}
+                  className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold hover:opacity-90"
+                >
+                  👑 Premium
+                </button>
+                <button 
+                  onClick={() => setUserData(prev => ({ ...prev, plan: 'profi' }))}
+                  className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold hover:opacity-90"
+                >
+                  💎 Профи
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
