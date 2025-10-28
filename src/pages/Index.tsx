@@ -19,11 +19,63 @@ interface UserData {
   plan: UserPlan;
 }
 
+type Language = 'ru' | 'en';
+type MenuView = 'chat' | 'settings' | 'privileges' | 'admin' | 'sites';
+
+interface Translations {
+  ru: Record<string, string>;
+  en: Record<string, string>;
+}
+
+const translations: Translations = {
+  ru: {
+    greeting: 'Привет! Я KosmoStudio AI. Опиши мне идею сайта, и я создам его для тебя прямо здесь! 🚀',
+    placeholder: 'Опиши идею сайта... Например: \'Лендинг для пиццерии с меню\'',
+    creating: 'Создаю сайт на основе твоего описания... ✨',
+    ready: 'Готово! Вот твой сайт',
+    download: 'Скачать код (HTML + CSS + JS)',
+    energy: 'энергии',
+    perRequest: 'за запрос',
+    settings: 'Настройки',
+    privileges: 'Привилегии',
+    admin: 'Админ панель',
+    sites: 'Мои сайты',
+    language: 'Язык',
+    logout: 'Выйти',
+    login: 'Войти',
+  },
+  en: {
+    greeting: 'Hi! I\'m KosmoStudio AI. Describe your website idea and I\'ll create it right here! 🚀',
+    placeholder: 'Describe website idea... Example: \'Landing page for pizzeria with menu\'',
+    creating: 'Creating website based on your description... ✨',
+    ready: 'Done! Here\'s your website',
+    download: 'Download code (HTML + CSS + JS)',
+    energy: 'energy',
+    perRequest: 'per request',
+    settings: 'Settings',
+    privileges: 'Privileges',
+    admin: 'Admin Panel',
+    sites: 'My Sites',
+    language: 'Language',
+    logout: 'Logout',
+    login: 'Login',
+  },
+};
+
 const Index = () => {
+  const [language, setLanguage] = useState<Language>('ru');
+  const [menuView, setMenuView] = useState<MenuView>('chat');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdminAuth, setIsAdminAuth] = useState(false);
+  const [adminLogin, setAdminLogin] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  
+  const t = translations[language];
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: 'Привет! Я KosmoStudio AI. Опиши мне идею сайта, и я создам его для тебя прямо здесь! 🚀',
+      text: t.greeting,
       isUser: false,
     },
   ]);
@@ -33,6 +85,7 @@ const Index = () => {
     energy: 1000,
     plan: 'free'
   });
+  const [generatedSites, setGeneratedSites] = useState<Array<{id: number; title: string; html: string; date: string}>>([]);
 
 
 
@@ -201,7 +254,7 @@ const Index = () => {
     setTimeout(() => {
       const aiMessage: Message = {
         id: Date.now() + 1,
-        text: 'Создаю сайт на основе твоего описания... ✨',
+        text: t.creating,
         isUser: false,
       };
       setMessages(prev => [...prev, aiMessage]);
@@ -209,9 +262,18 @@ const Index = () => {
       setTimeout(() => {
         const generatedHtml = generateSiteCode(userIdea);
         
-        const resultMessage: Message = {
+        const siteData = {
           id: Date.now() + 2,
-          text: `Готово! Вот твой сайт "${userIdea}". Можешь нажать на него чтобы открыть в полном размере! 🎉`,
+          title: userIdea,
+          html: generatedHtml,
+          date: new Date().toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')
+        };
+        
+        setGeneratedSites(prev => [siteData, ...prev]);
+        
+        const resultMessage: Message = {
+          id: siteData.id,
+          text: `${t.ready} "${userIdea}". 🎉`,
           isUser: false,
           sitePreview: generatedHtml,
         };
@@ -289,12 +351,361 @@ const Index = () => {
               <div className={`px-3 py-1 rounded-full text-xs font-bold text-white ${getPlanColor(userData.plan)}`}>
                 {getPlanBadge(userData.plan)}
               </div>
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="w-10 h-10 flex flex-col items-center justify-center gap-1 hover:bg-primary/10 rounded-lg transition-colors"
+              >
+                <div className="w-5 h-0.5 bg-foreground rounded-full"></div>
+                <div className="w-5 h-0.5 bg-foreground rounded-full"></div>
+                <div className="w-5 h-0.5 bg-foreground rounded-full"></div>
+              </button>
             </div>
           </div>
         </header>
 
+        {isMenuOpen && (
+          <div className="absolute right-4 top-20 w-64 bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-2xl z-50 overflow-hidden">
+            <div className="p-2 space-y-1">
+              <button
+                onClick={() => { setMenuView('settings'); setIsMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 rounded-lg transition-colors text-left"
+              >
+                <Icon name="Settings" size={20} />
+                <span>{t.settings}</span>
+              </button>
+              <button
+                onClick={() => { setMenuView('privileges'); setIsMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 rounded-lg transition-colors text-left"
+              >
+                <Icon name="Crown" size={20} className="text-yellow-500" />
+                <span>{t.privileges}</span>
+              </button>
+              <button
+                onClick={() => { setMenuView('sites'); setIsMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 rounded-lg transition-colors text-left"
+              >
+                <Icon name="Globe" size={20} />
+                <span>{t.sites}</span>
+              </button>
+              <button
+                onClick={() => { 
+                  if (!isAdminAuth) {
+                    setMenuView('admin');
+                  } else {
+                    setMenuView('admin');
+                  }
+                  setIsMenuOpen(false); 
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/10 rounded-lg transition-colors text-left"
+              >
+                <Icon name="Shield" size={20} className="text-secondary" />
+                <span>{t.admin}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto px-6 py-8">
           <div className="max-w-4xl mx-auto space-y-6">
+            {menuView === 'settings' && (
+              <Card className="p-8 animate-fade-in">
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                  <Icon name="Settings" size={24} />
+                  {t.settings}
+                </h2>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-3">{t.language}</label>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => setLanguage('ru')}
+                        variant={language === 'ru' ? 'default' : 'outline'}
+                        className={language === 'ru' ? 'bg-gradient-to-r from-primary to-secondary text-black' : ''}
+                      >
+                        🇷🇺 Русский
+                      </Button>
+                      <Button
+                        onClick={() => setLanguage('en')}
+                        variant={language === 'en' ? 'default' : 'outline'}
+                        className={language === 'en' ? 'bg-gradient-to-r from-primary to-secondary text-black' : ''}
+                      >
+                        🇬🇧 English
+                      </Button>
+                    </div>
+                  </div>
+                  <Button onClick={() => setMenuView('chat')} className="w-full">
+                    <Icon name="ArrowLeft" size={16} className="mr-2" />
+                    {language === 'ru' ? 'Вернуться к чату' : 'Back to chat'}
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {menuView === 'privileges' && (
+              <Card className="p-8 animate-fade-in">
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                  <Icon name="Crown" size={24} className="text-yellow-500" />
+                  {t.privileges}
+                </h2>
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                  <Card className="p-6 border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
+                    <div className="text-center mb-4">
+                      <div className="text-4xl mb-2">👑</div>
+                      <h3 className="text-2xl font-bold">Premium</h3>
+                      <p className="text-3xl font-bold text-yellow-500 mt-2">667 ₽</p>
+                    </div>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2">
+                        <Icon name="Check" size={16} className="text-yellow-500" />
+                        <span>{language === 'ru' ? '5000 энергии в месяц' : '5000 energy per month'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Icon name="Check" size={16} className="text-yellow-500" />
+                        <span>{language === 'ru' ? 'Приоритетная генерация' : 'Priority generation'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Icon name="Check" size={16} className="text-yellow-500" />
+                        <span>{language === 'ru' ? 'Без рекламы' : 'No ads'}</span>
+                      </li>
+                    </ul>
+                    <Button 
+                      className="w-full mt-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold"
+                      onClick={() => {
+                        setUserData(prev => ({ ...prev, plan: 'premium', energy: prev.energy + 5000 }));
+                        toast.success(language === 'ru' ? 'Premium активирован!' : 'Premium activated!');
+                      }}
+                    >
+                      {language === 'ru' ? 'Купить Premium' : 'Buy Premium'}
+                    </Button>
+                  </Card>
+
+                  <Card className="p-6 border-2 border-pink-500/50 bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+                    <div className="text-center mb-4">
+                      <div className="text-4xl mb-2">💎</div>
+                      <h3 className="text-2xl font-bold">Профи</h3>
+                      <p className="text-3xl font-bold text-pink-500 mt-2">3455 ₽</p>
+                    </div>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2">
+                        <Icon name="Check" size={16} className="text-pink-500" />
+                        <span>{language === 'ru' ? 'Безлимитная энергия' : 'Unlimited energy'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Icon name="Check" size={16} className="text-pink-500" />
+                        <span>{language === 'ru' ? 'Мгновенная генерация' : 'Instant generation'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Icon name="Check" size={16} className="text-pink-500" />
+                        <span>{language === 'ru' ? 'Эксклюзивные шаблоны' : 'Exclusive templates'}</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Icon name="Check" size={16} className="text-pink-500" />
+                        <span>{language === 'ru' ? 'Приоритетная поддержка' : 'Priority support'}</span>
+                      </li>
+                    </ul>
+                    <Button 
+                      className="w-full mt-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold"
+                      onClick={() => {
+                        setUserData(prev => ({ ...prev, plan: 'profi', energy: 999999 }));
+                        toast.success(language === 'ru' ? 'Профи активирован!' : 'Profi activated!');
+                      }}
+                    >
+                      {language === 'ru' ? 'Купить Профи' : 'Buy Profi'}
+                    </Button>
+                  </Card>
+                </div>
+                <Button onClick={() => setMenuView('chat')} className="w-full">
+                  <Icon name="ArrowLeft" size={16} className="mr-2" />
+                  {language === 'ru' ? 'Вернуться к чату' : 'Back to chat'}
+                </Button>
+              </Card>
+            )}
+
+            {menuView === 'admin' && !isAdminAuth && (
+              <Card className="p-8 animate-fade-in max-w-md mx-auto">
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                  <Icon name="Shield" size={24} className="text-secondary" />
+                  {t.admin}
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">{language === 'ru' ? 'Логин' : 'Login'}</label>
+                    <Input
+                      value={adminLogin}
+                      onChange={(e) => setAdminLogin(e.target.value)}
+                      placeholder="KosmoCat"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">{language === 'ru' ? 'Пароль' : 'Password'}</label>
+                    <Input
+                      type="password"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (adminLogin === 'KosmoCat' && adminPassword === 'KosmoCat') {
+                        setIsAdminAuth(true);
+                        toast.success(language === 'ru' ? 'Вход выполнен!' : 'Logged in!');
+                      } else {
+                        toast.error(language === 'ru' ? 'Неверный логин или пароль' : 'Invalid credentials');
+                      }
+                    }}
+                    className="w-full bg-gradient-to-r from-secondary to-primary text-black font-bold"
+                  >
+                    {t.login}
+                  </Button>
+                  <Button onClick={() => setMenuView('chat')} variant="outline" className="w-full">
+                    <Icon name="ArrowLeft" size={16} className="mr-2" />
+                    {language === 'ru' ? 'Назад' : 'Back'}
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {menuView === 'admin' && isAdminAuth && (
+              <Card className="p-8 animate-fade-in">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <Icon name="Shield" size={24} className="text-secondary" />
+                    {t.admin}
+                  </h2>
+                  <Button
+                    onClick={() => {
+                      setIsAdminAuth(false);
+                      setAdminLogin('');
+                      setAdminPassword('');
+                      toast.success(language === 'ru' ? 'Вы вышли из системы' : 'Logged out');
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {t.logout}
+                  </Button>
+                </div>
+                <div className="space-y-6">
+                  <Card className="p-4 bg-secondary/10">
+                    <h3 className="font-bold mb-4">{language === 'ru' ? 'Выдать энергию' : 'Grant Energy'}</h3>
+                    <div className="flex gap-3">
+                      <Input
+                        type="number"
+                        placeholder={language === 'ru' ? 'Количество' : 'Amount'}
+                        id="energy-input"
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={() => {
+                          const input = document.getElementById('energy-input') as HTMLInputElement;
+                          const amount = parseInt(input.value);
+                          if (amount > 0) {
+                            setUserData(prev => ({ ...prev, energy: prev.energy + amount }));
+                            toast.success(`+${amount} ${t.energy}`);
+                            input.value = '';
+                          }
+                        }}
+                        className="bg-gradient-to-r from-primary to-secondary text-black"
+                      >
+                        <Icon name="Plus" size={16} />
+                      </Button>
+                    </div>
+                  </Card>
+
+                  <Card className="p-4 bg-primary/10">
+                    <h3 className="font-bold mb-4">{language === 'ru' ? 'Управление планом' : 'Manage Plan'}</h3>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => {
+                          setUserData(prev => ({ ...prev, plan: 'free' }));
+                          toast.success('Plan: Free');
+                        }}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        🆓 Free
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setUserData(prev => ({ ...prev, plan: 'premium' }));
+                          toast.success('Plan: Premium');
+                        }}
+                        className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-black"
+                      >
+                        👑 Premium
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setUserData(prev => ({ ...prev, plan: 'profi' }));
+                          toast.success('Plan: Profi');
+                        }}
+                        className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                      >
+                        💎 Профи
+                      </Button>
+                    </div>
+                  </Card>
+
+                  <Button onClick={() => setMenuView('chat')} className="w-full">
+                    <Icon name="ArrowLeft" size={16} className="mr-2" />
+                    {language === 'ru' ? 'Вернуться к чату' : 'Back to chat'}
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {menuView === 'sites' && (
+              <Card className="p-8 animate-fade-in">
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                  <Icon name="Globe" size={24} />
+                  {t.sites}
+                </h2>
+                {generatedSites.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-12">
+                    {language === 'ru' ? 'У вас пока нет созданных сайтов' : 'You have no sites yet'}
+                  </p>
+                ) : (
+                  <div className="space-y-4 mb-6">
+                    {generatedSites.map(site => (
+                      <Card key={site.id} className="p-4 hover:border-primary/50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-bold">{site.title}</h3>
+                            <p className="text-sm text-muted-foreground">{site.date}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openSiteInNewTab(site.html)}
+                            >
+                              <Icon name="ExternalLink" size={16} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadCode(site.html, `${site.title}.html`)}
+                            >
+                              <Icon name="Download" size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+                <Button onClick={() => setMenuView('chat')} className="w-full">
+                  <Icon name="ArrowLeft" size={16} className="mr-2" />
+                  {language === 'ru' ? 'Вернуться к чату' : 'Back to chat'}
+                </Button>
+              </Card>
+            )}
+
+            {menuView === 'chat' && (
+              <>
             {messages.length === 1 && (
               <div className="text-center space-y-8 py-12 animate-fade-in">
                 <div className="space-y-4">
@@ -406,7 +817,7 @@ const Index = () => {
                         className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-black font-semibold"
                       >
                         <Icon name="Download" size={16} className="mr-2" />
-                        Скачать код (HTML + CSS + JS)
+                        {t.download}
                       </Button>
                     </div>
                   )}
@@ -442,7 +853,7 @@ const Index = () => {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                  placeholder="Опиши идею сайта... Например: 'Лендинг для пиццерии с меню'"
+                  placeholder={t.placeholder}
                   className="pr-12 h-14 bg-input/50 backdrop-blur-sm border-primary/30 focus:border-primary text-base"
                   disabled={isGenerating}
                 />
@@ -462,23 +873,11 @@ const Index = () => {
                 )}
               </Button>
             </div>
-            <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
-              <span>У тебя {userData.energy} энергии • 2 энергии за запрос</span>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setUserData(prev => ({ ...prev, plan: 'premium' }))}
-                  className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold hover:opacity-90"
-                >
-                  👑 Premium
-                </button>
-                <button 
-                  onClick={() => setUserData(prev => ({ ...prev, plan: 'profi' }))}
-                  className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold hover:opacity-90"
-                >
-                  💎 Профи
-                </button>
+            {menuView === 'chat' && (
+              <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+                <span>{language === 'ru' ? `У тебя ${userData.energy} энергии • 2 энергии за запрос` : `You have ${userData.energy} energy • 2 energy per request`}</span>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
