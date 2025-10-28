@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -81,11 +81,14 @@ const Index = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [userData, setUserData] = useState<UserData>({
-    energy: 1000,
-    plan: 'free'
+  const [userData, setUserData] = useState<UserData>(() => {
+    const saved = localStorage.getItem('kosmoStudioUserData');
+    return saved ? JSON.parse(saved) : { energy: 1000, plan: 'free' };
   });
-  const [generatedSites, setGeneratedSites] = useState<Array<{id: number; title: string; html: string; date: string}>>([]);
+  const [generatedSites, setGeneratedSites] = useState<Array<{id: number; title: string; html: string; date: string}>>(() => {
+    const saved = localStorage.getItem('kosmoStudioSites');
+    return saved ? JSON.parse(saved) : [];
+  });
 
 
 
@@ -325,6 +328,14 @@ const Index = () => {
         return 'bg-gray-500';
     }
   };
+
+  useEffect(() => {
+    localStorage.setItem('kosmoStudioUserData', JSON.stringify(userData));
+  }, [userData]);
+
+  useEffect(() => {
+    localStorage.setItem('kosmoStudioSites', JSON.stringify(generatedSites));
+  }, [generatedSites]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-black to-background relative overflow-hidden">
@@ -706,7 +717,7 @@ const Index = () => {
 
             {menuView === 'chat' && (
               <>
-            {messages.length === 1 && (
+                {messages.length === 1 && (
               <div className="text-center space-y-8 py-12 animate-fade-in">
                 <div className="space-y-4">
                   <h2 className="text-5xl font-bold">
@@ -825,22 +836,24 @@ const Index = () => {
               </div>
             ))}
 
-            {isGenerating && (
-              <div className="flex gap-4 animate-fade-in">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-secondary to-primary">
-                  <Icon name="Loader2" className="text-black animate-spin" size={20} />
-                </div>
-                <Card className="p-4 bg-card/80 backdrop-blur-sm border-primary/20">
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                {isGenerating && (
+                  <div className="flex gap-4 animate-fade-in">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-secondary to-primary">
+                      <Icon name="Loader2" className="text-black animate-spin" size={20} />
                     </div>
-                    <span className="text-sm text-muted-foreground">Генерирую...</span>
+                    <Card className="p-4 bg-card/80 backdrop-blur-sm border-primary/20">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="text-sm text-muted-foreground">Генерирую...</span>
+                      </div>
+                    </Card>
                   </div>
-                </Card>
-              </div>
+                )}
+              </>
             )}
           </div>
         </div>
