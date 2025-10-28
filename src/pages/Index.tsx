@@ -412,6 +412,15 @@ const Index = () => {
                 <Icon name="Shield" size={20} className="text-secondary" />
                 <span>{t.admin}</span>
               </button>
+              <button
+                onClick={() => { 
+                  window.open('https://t.me/kosmostudio111', '_blank');
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-500/10 rounded-lg transition-colors text-left border-t border-border/50 mt-2 pt-3"
+              >
+                <Icon name="Send" size={20} className="text-blue-500" />
+                <span>{language === 'ru' ? 'Подписаться на ТГК' : 'Subscribe to Telegram'}</span>
+              </button>
             </div>
           </div>
         )}
@@ -482,8 +491,7 @@ const Index = () => {
                     <Button 
                       className="w-full mt-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold"
                       onClick={() => {
-                        setUserData(prev => ({ ...prev, plan: 'premium', energy: prev.energy + 5000 }));
-                        toast.success(language === 'ru' ? 'Premium активирован!' : 'Premium activated!');
+                        toast.info(language === 'ru' ? 'Свяжитесь с администрацией для покупки' : 'Contact admin to purchase');
                       }}
                     >
                       {language === 'ru' ? 'Купить Premium' : 'Buy Premium'}
@@ -499,7 +507,7 @@ const Index = () => {
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-center gap-2">
                         <Icon name="Check" size={16} className="text-pink-500" />
-                        <span>{language === 'ru' ? 'Безлимитная энергия' : 'Unlimited energy'}</span>
+                        <span>{language === 'ru' ? '10000 энергии в месяц' : '10000 energy per month'}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Icon name="Check" size={16} className="text-pink-500" />
@@ -517,8 +525,7 @@ const Index = () => {
                     <Button 
                       className="w-full mt-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold"
                       onClick={() => {
-                        setUserData(prev => ({ ...prev, plan: 'profi', energy: 999999 }));
-                        toast.success(language === 'ru' ? 'Профи активирован!' : 'Profi activated!');
+                        toast.info(language === 'ru' ? 'Свяжитесь с администрацией для покупки' : 'Contact admin to purchase');
                       }}
                     >
                       {language === 'ru' ? 'Купить Профи' : 'Buy Profi'}
@@ -601,27 +608,40 @@ const Index = () => {
                 </div>
                 <div className="space-y-6">
                   <Card className="p-4 bg-secondary/10">
-                    <h3 className="font-bold mb-4">{language === 'ru' ? 'Выдать энергию' : 'Grant Energy'}</h3>
-                    <div className="flex gap-3">
-                      <Input
-                        type="number"
-                        placeholder={language === 'ru' ? 'Количество' : 'Amount'}
-                        id="energy-input"
-                        className="flex-1"
-                      />
+                    <h3 className="font-bold mb-4">{language === 'ru' ? 'Управление энергией' : 'Energy Management'}</h3>
+                    <div className="space-y-3">
+                      <div className="flex gap-3">
+                        <Input
+                          type="number"
+                          placeholder={language === 'ru' ? 'Количество' : 'Amount'}
+                          id="energy-input"
+                          className="flex-1"
+                        />
+                        <Button
+                          onClick={() => {
+                            const input = document.getElementById('energy-input') as HTMLInputElement;
+                            const amount = parseInt(input.value);
+                            if (amount > 0) {
+                              setUserData(prev => ({ ...prev, energy: prev.energy + amount }));
+                              toast.success(`+${amount} ${t.energy}`);
+                              input.value = '';
+                            }
+                          }}
+                          className="bg-gradient-to-r from-primary to-secondary text-black"
+                        >
+                          <Icon name="Plus" size={16} />
+                        </Button>
+                      </div>
                       <Button
                         onClick={() => {
-                          const input = document.getElementById('energy-input') as HTMLInputElement;
-                          const amount = parseInt(input.value);
-                          if (amount > 0) {
-                            setUserData(prev => ({ ...prev, energy: prev.energy + amount }));
-                            toast.success(`+${amount} ${t.energy}`);
-                            input.value = '';
-                          }
+                          setUserData(prev => ({ ...prev, energy: 1000 }));
+                          toast.success(language === 'ru' ? 'Энергия сброшена до 1000' : 'Energy reset to 1000');
                         }}
-                        className="bg-gradient-to-r from-primary to-secondary text-black"
+                        variant="outline"
+                        className="w-full"
                       >
-                        <Icon name="Plus" size={16} />
+                        <Icon name="RotateCcw" size={16} className="mr-2" />
+                        {language === 'ru' ? 'Сбросить энергию' : 'Reset Energy'}
                       </Button>
                     </div>
                   </Card>
@@ -838,17 +858,35 @@ const Index = () => {
 
                 {isGenerating && (
                   <div className="flex gap-4 animate-fade-in">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-secondary to-primary">
-                      <Icon name="Loader2" className="text-black animate-spin" size={20} />
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-secondary to-primary animate-pulse">
+                      <Icon name="Sparkles" className="text-black" size={20} />
                     </div>
-                    <Card className="p-4 bg-card/80 backdrop-blur-sm border-primary/20">
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <Card className="p-6 bg-gradient-to-br from-primary/10 via-secondary/10 to-primary/10 backdrop-blur-sm border-primary/30 animate-pulse">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex gap-1">
+                            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-secondary animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-secondary animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-secondary animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                          <span className="text-base font-semibold text-gradient">
+                            {language === 'ru' ? 'Создаю сайт...' : 'Creating site...'}
+                          </span>
                         </div>
-                        <span className="text-sm text-muted-foreground">Генерирую...</span>
+                        <div className="space-y-1.5 text-xs text-muted-foreground">
+                          <p className="flex items-center gap-2">
+                            <Icon name="Code" size={14} className="text-primary" />
+                            {language === 'ru' ? 'Генерирую HTML структуру' : 'Generating HTML structure'}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <Icon name="Palette" size={14} className="text-secondary" />
+                            {language === 'ru' ? 'Применяю стили и анимации' : 'Applying styles and animations'}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <Icon name="Rocket" size={14} className="text-primary" />
+                            {language === 'ru' ? 'Оптимизирую дизайн' : 'Optimizing design'}
+                          </p>
+                        </div>
                       </div>
                     </Card>
                   </div>
